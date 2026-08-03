@@ -1,0 +1,225 @@
+
+version: 2
+
+models:
+  - name: dim_movies
+    description: Dimension table for cleansed movie metadata
+    columns:
+      - name: movie_id
+        description: Primary key of the movie
+        tests:
+          - unique
+          - not_null
+      - name: movie_title
+        description: Standardized movie title
+        tests:
+          - not_null
+      - name: genre_array
+        description: List of genres in array format
+      - name: genres
+        description: Raw genre string from source
+
+   
+
+  - name: dim_users
+    description: Dimension table of unique users from both ratings and tags
+    columns:
+      - name: user_id
+        description: Unique user identifier
+        tests:
+          - unique
+          - not_null
+        
+
+  - name: dim_genome_tags
+    description: Dimension table of genome tag labels
+    columns:
+      - name: tag_id
+        description: Unique tag ID
+        tests:
+          - not_null
+          - unique
+      - name: tag_name
+        description: Cleaned, human-readable tag name
+        tests:
+          - not_null
+
+
+  - name: fct_ratings
+    description: Fact table of user ratings for movies
+    columns:
+      - name: user_id
+        description: Foreign key to dim_users
+        tests:
+          - not_null
+      - name: movie_id
+        description: Foreign key to dim_movies
+        tests:
+          - not_null
+          # Disabled because the loaded MovieLens dataset contains
+          # orphan movie_ids in ratings that are not present in movies.
+          # Re-enable after validating or cleaning the source data.
+          #- relationships:
+           #   to: ref('dim_movies')
+           #   field: movie_id
+      - name: rating
+        description: User's rating for a movie
+        tests:
+          - not_null
+      - name: rating_timestamp
+        description: Date and time when the user submitted the rating.
+
+
+  - name: fct_genome_scores
+    description: Fact table of relevance scores per movie and tag
+    columns:
+      - name: movie_id
+        description: Foreign key to dim_movies
+        tests:
+          - not_null
+      - name: tag_id
+        description: Foreign key to dim_genome_tags
+        tests:
+          - not_null
+      - name: relevance_score
+        description: Relevance score (0 to 1) for tag's association with movie
+        tests:
+          - not_null
+  
+  - name: mart_movie_popularity
+    description: >
+      Business mart that ranks movies based on user ratings and engagement.
+      Includes a custom popularity score combining average rating and
+      total number of ratings.
+    columns:
+      - name: movie_id
+        description: Unique identifier of the movie.
+        tests:
+          - not_null
+
+      - name: movie_title
+        description: Standardized movie title.
+
+      - name: average_rating
+        description: Average user rating for the movie.
+
+      - name: total_ratings
+        description: Total number of ratings received by the movie.
+
+      - name: popularity_score
+        description: >
+          Custom metric calculated as
+          Average Rating × SQRT(Total Ratings). 
+
+  - name: mart_genre_performance
+    description: >
+      Business mart that summarizes movie performance by genre.
+      Used for identifying the highest-rated and most-engaged genres.
+
+    columns:
+      - name: genre
+        description: Movie genre extracted from genre_array.
+        tests:
+          - not_null
+
+      - name: average_rating
+        description: Average rating received by movies in the genre.
+
+      - name: total_ratings
+        description: Total number of ratings submitted for the genre.
+
+      - name: unique_movies
+        description: Number of distinct movies belonging to the genre.
+
+
+
+  - name: mart_user_engagement
+    description: Business mart measuring user engagement through rating and tagging activity.
+    columns:
+      - name: user_id
+        description: Unique user identifier
+        tests:
+          - not_null
+
+      - name: ratings_given
+        description: Number of ratings submitted by the user
+
+      - name: tags_added
+        description: Number of tags created by the user
+
+      - name: total_activity
+        description: Combined engagement score based on ratings and tags
+
+
+  - name: mart_movie_quality
+    description: Business mart categorizing movies based on their average ratings.
+    columns:
+      - name: movie_id
+        description: Unique movie identifier
+        tests:
+          - not_null
+
+      - name: movie_title
+        description: Movie title
+
+      - name: average_rating
+        description: Average movie rating
+
+      - name: total_ratings
+        description: Number of ratings received
+
+      - name: quality_category
+        description: >
+          Quality classification of the movie based on its average rating
+          (Highly Rated, Average, or Poorly Rated).
+
+  - name: mart_rating_distribution
+    description: >
+      Business mart summarizing how ratings are distributed
+      across all user reviews.
+    columns:
+      - name: rating
+        description: Rating value
+
+      - name: total_ratings
+        description: Number of times each rating appears
+
+  - name: mart_movie_tags
+    description: Business mart identifying the strongest descriptive genome tags associated with each movie.
+    columns:
+      - name: movie_id
+        description: Unique movie identifier
+        tests:
+          - not_null
+
+      - name: movie_title
+        description: Movie title
+
+      - name: tag_id
+        description: Genome tag identifier
+
+      - name: tag_name
+        description: Human-readable genome tag
+
+      - name: relevance_score
+        description: Relevance score indicating how strongly the tag describes the movie
+
+
+  - name: mart_genre_engagement
+    description: >
+      Business mart measuring user engagement across movie genres
+      using total ratings, unique users, and unique movies.
+    columns:
+      - name: genre
+        description: Movie genre
+        tests:
+          - not_null
+
+      - name: total_ratings
+        description: Total ratings received by the genre
+
+      - name: unique_users
+        description: Number of distinct users who rated movies in the genre
+
+      - name: unique_movies
+        description: Number of unique movies in the genre
