@@ -83,8 +83,6 @@ The Power BI dashboard provides insights into:
 - User engagement
 - Platform summary statistics
 
-*(Dashboard preview will be added here.)*
-
 
 
 ###  Technologies Used
